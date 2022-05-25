@@ -1,19 +1,19 @@
 use askama::Template;
 use base64::URL_SAFE_NO_PAD;
 use config::Config;
-use id_contact_jwt::sign_and_encrypt_auth_result;
-use id_contact_proto::{
-    AuthResult, AuthStatus, SessionActivity, StartAuthRequest, StartAuthResponse,
-};
 use rocket::{
     form::FromForm,
     get, launch, post,
-    response::{content::Html, Redirect},
+    response::{content::RawHtml, Redirect},
     routes,
     serde::json::Json,
     State,
 };
 use std::{error::Error as StdError, fmt::Display};
+use verder_helpen_jwt::sign_and_encrypt_auth_result;
+use verder_helpen_proto::{
+    AuthResult, AuthStatus, SessionActivity, StartAuthRequest, StartAuthResponse,
+};
 
 mod config;
 
@@ -24,7 +24,7 @@ enum Error {
     Template(askama::Error),
     Json(serde_json::Error),
     Utf(std::str::Utf8Error),
-    Jwt(id_contact_jwt::Error),
+    Jwt(verder_helpen_jwt::Error),
 }
 
 impl<'r, 'o: 'r> rocket::response::Responder<'r, 'o> for Error {
@@ -64,8 +64,8 @@ impl From<std::str::Utf8Error> for Error {
     }
 }
 
-impl From<id_contact_jwt::Error> for Error {
-    fn from(e: id_contact_jwt::Error) -> Error {
+impl From<verder_helpen_jwt::Error> for Error {
+    fn from(e: verder_helpen_jwt::Error) -> Error {
         Error::Jwt(e)
     }
 }
@@ -114,7 +114,7 @@ async fn confirm_oob(
     attributes: String,
     continuation: String,
     attr_url: String,
-) -> Result<Html<String>, Error> {
+) -> Result<RawHtml<String>, Error> {
     let template = ConfirmTemplate {
         dologin: &format!(
             "{}/browser/{}/{}/{}",
@@ -125,7 +125,7 @@ async fn confirm_oob(
         ),
     };
     let output = template.render()?;
-    Ok(Html(output))
+    Ok(RawHtml(output))
 }
 
 #[get("/confirm/<attributes>/<continuation>")]
@@ -133,7 +133,7 @@ async fn confirm_ib(
     config: &State<config::Config>,
     attributes: String,
     continuation: String,
-) -> Result<Html<String>, Error> {
+) -> Result<RawHtml<String>, Error> {
     let template = ConfirmTemplate {
         dologin: &format!(
             "{}/browser/{}/{}",
@@ -143,7 +143,7 @@ async fn confirm_ib(
         ),
     };
     let output = template.render()?;
-    Ok(Html(output))
+    Ok(RawHtml(output))
 }
 
 #[post("/session/update?<typedata..>")]
