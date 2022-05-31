@@ -287,10 +287,10 @@ fn rocket() -> _ {
         ],
     );
 
-    let config = base.figment().extract::<Config>().unwrap_or_else(|_e| {
-        // Drop error value, as it could contain secrets
-        panic!("Failure to parse configuration")
-    });
+    let config = base
+        .figment()
+        .extract::<Config>()
+        .unwrap_or_else(|e| panic!("Failure to parse configuration: {:?}", e));
 
     base.manage(config)
 }
