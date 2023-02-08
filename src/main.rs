@@ -188,12 +188,12 @@ async fn user_oob(
         .await;
     if let Err(e) = result {
         // Log only
-        println!("Failure reporting results: {}", e);
+        println!("Failure reporting results: {e}");
     } else {
         println!("Reported result jwe {} to {}", &auth_result, attr_url);
     }
 
-    println!("Redirecting user to {}", continuation);
+    println!("Redirecting user to {continuation}");
     Ok(Redirect::to(continuation.to_string()))
 }
 
@@ -226,15 +226,9 @@ async fn user_inline(
         continuation, &auth_result
     );
     if continuation.contains('?') {
-        Ok(Redirect::to(format!(
-            "{}&result={}",
-            continuation, auth_result
-        )))
+        Ok(Redirect::to(format!("{continuation}&result={auth_result}")))
     } else {
-        Ok(Redirect::to(format!(
-            "{}?result={}",
-            continuation, auth_result
-        )))
+        Ok(Redirect::to(format!("{continuation}?result={auth_result}")))
     }
 }
 
