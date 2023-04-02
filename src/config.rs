@@ -1,6 +1,7 @@
+use std::{collections::HashMap, convert::TryFrom, error::Error as StdError, fmt::Display};
+
 use josekit::{jwe::JweEncrypter, jws::JwsSigner};
 use serde::Deserialize;
-use std::{collections::HashMap, convert::TryFrom, error::Error as StdError, fmt::Display};
 use verder_helpen_jwt::{EncryptionKeyConfig, SignKeyConfig};
 
 #[derive(Debug)]
@@ -32,7 +33,7 @@ impl From<verder_helpen_jwt::Error> for Error {
 impl Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Error::UnknownAttribute(a) => f.write_fmt(format_args!("Unknown attribute {a}")),
+            Error::UnknownAttribute(a) => f.write_fmt(format_args!("Unknown attribute {}", a)),
             Error::Yaml(e) => e.fmt(f),
             Error::Json(e) => e.fmt(f),
             Error::Jwt(e) => e.fmt(f),
@@ -76,6 +77,7 @@ pub struct Config {
 // This tryfrom can be removed once try_from for fields lands in serde
 impl TryFrom<RawConfig> for Config {
     type Error = Error;
+
     fn try_from(config: RawConfig) -> Result<Config, Error> {
         Ok(Config {
             server_url: config.server_url,
