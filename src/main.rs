@@ -1,3 +1,5 @@
+use std::{collections::HashMap, error::Error as StdError, fmt::Display};
+
 use askama::Template;
 use base64::URL_SAFE_NO_PAD;
 use config::Config;
@@ -9,7 +11,6 @@ use rocket::{
     serde::json::Json,
     State,
 };
-use std::{error::Error as StdError, fmt::Display};
 use verder_helpen_jwt::sign_and_encrypt_auth_result;
 use verder_helpen_proto::{
     AuthResult, AuthStatus, SessionActivity, StartAuthRequest, StartAuthResponse,
@@ -97,9 +98,11 @@ impl StdError for Error {
 }
 
 #[derive(Template)]
-#[template(path = "confirm_auth.html")]
-struct ConfirmTemplate<'a> {
-    dologin: &'a str,
+#[template(path = "confirm.html")]
+struct ConfirmTemplate {
+    dologin: String,
+    dologout: String,
+    attributes: HashMap<String, String>,
 }
 
 #[derive(FromForm, Debug)]
@@ -115,14 +118,26 @@ async fn confirm_oob(
     continuation: String,
     attr_url: String,
 ) -> Result<RawHtml<String>, Error> {
+    let values = config.map_attributes(&serde_json::from_slice::<Vec<String>>(
+        &base64::decode_config(attributes.clone(), URL_SAFE_NO_PAD)?,
+    )?)?;
     let template = ConfirmTemplate {
-        dologin: &format!(
+        dologin: format!(
             "{}/browser/{}/{}/{}",
             config.server_url(),
             attributes,
             continuation,
             attr_url
         ),
+        dologout: format!(
+            // TODO add the URL to not send the attributes
+            "{}/browser/{}/{}/{}",
+            config.server_url(),
+            attributes,
+            continuation,
+            attr_url
+        ),
+        attributes: values,
     };
     let output = template.render()?;
     Ok(RawHtml(output))
@@ -134,13 +149,18 @@ async fn confirm_ib(
     attributes: String,
     continuation: String,
 ) -> Result<RawHtml<String>, Error> {
+    let values = config.map_attributes(&serde_json::from_slice::<Vec<String>>(
+        &base64::decode_config(attributes.clone(), URL_SAFE_NO_PAD)?,
+    )?)?;
     let template = ConfirmTemplate {
-        dologin: &format!(
+        dologin: format!(
             "{}/browser/{}/{}",
             config.server_url(),
             attributes,
             continuation
         ),
+        dologout: format!("{}/cancel/browser/{}", config.server_url(), continuation),
+        attributes: values,
     };
     let output = template.render()?;
     Ok(RawHtml(output))
@@ -188,12 +208,21 @@ async fn user_oob(
         .await;
     if let Err(e) = result {
         // Log only
-        println!("Failure reporting results: {e}");
+        println!("Failure reporting results: {}", e);
     } else {
         println!("Reported result jwe {} to {}", &auth_result, attr_url);
     }
 
-    println!("Redirecting user to {continuation}");
+    println!("Redirecting user to {}", continuation);
+    Ok(Redirect::to(continuation.to_string()))
+}
+
+#[get("/cancel/browser/<continuation>")]
+async fn cancel_oob(continuation: String) -> Result<Redirect, Error> {
+    let continuation = base64::decode_config(continuation, URL_SAFE_NO_PAD)?;
+    let continuation = std::str::from_utf8(&continuation)?;
+
+    println!("Redirecting user to {}", continuation);
     Ok(Redirect::to(continuation.to_string()))
 }
 
@@ -226,9 +255,15 @@ async fn user_inline(
         continuation, &auth_result
     );
     if continuation.contains('?') {
-        Ok(Redirect::to(format!("{continuation}&result={auth_result}")))
+        Ok(Redirect::to(format!(
+            "{}&result={}",
+            continuation, auth_result
+        )))
     } else {
-        Ok(Redirect::to(format!("{continuation}?result={auth_result}")))
+        Ok(Redirect::to(format!(
+            "{}?result={}",
+            continuation, auth_result
+        )))
     }
 }
 
@@ -272,12 +307,13 @@ fn rocket() -> _ {
     let base = rocket::build().mount(
         "/",
         routes![
+            cancel_oob,
+            confirm_ib,
+            confirm_oob,
+            session_update,
             start_authentication,
             user_inline,
             user_oob,
-            session_update,
-            confirm_oob,
-            confirm_ib
         ],
     );
 
