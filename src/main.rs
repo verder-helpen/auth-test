@@ -129,14 +129,7 @@ async fn confirm_oob(
             continuation,
             attr_url
         ),
-        dologout: format!(
-            // TODO add the URL to not send the attributes
-            "{}/browser/{}/{}/{}",
-            config.server_url(),
-            attributes,
-            continuation,
-            attr_url
-        ),
+        dologout: format!("{}/cancel/browser/{}", config.server_url(), continuation),
         attributes: values,
     };
     let output = template.render()?;
@@ -167,8 +160,9 @@ async fn confirm_ib(
 }
 
 #[post("/session/update?<typedata..>")]
-async fn session_update(typedata: SessionUpdateData) {
+async fn session_update(typedata: SessionUpdateData) -> Result<(), Error> {
     println!("Session update received: {:?}", typedata.typeval);
+    Ok(())
 }
 
 #[get("/browser/<attributes>/<continuation>/<attr_url>")]
