@@ -22,12 +22,22 @@
         <p><i>Foutmelding: Geen gegevens gevonden</i></p>
         {% endif %}
       </section>
-      <form action="{{ dologin }}" method="get">
-        <button type="submit" class="button primary">Bevestigen</button>
-      </form>
-      <form action="{{ dologout }}" method="post">
-        <button type="submit" class="button">Uitloggen</button>
-      </form>
+      <div class="options">
+        <form action="{{ dologin }}" method="get">
+          <button type="submit" class="button primary">
+            <span class="text">Bevestigen</span>
+          </button>
+        </form>
+        <form action="{{ dologout }}" method="post">
+          <button type="submit" class="button">
+            <span class="text">Uitloggen</span>
+          </button>
+        </form>
+      </div>
     </main>
+    <footer>
+      <span class="text">beveiligd door</span>
+      <span class="logo">Verder Helpen</span>
+    </footer>
   </body>
 </html>
